@@ -1,15 +1,23 @@
 version: "3.7"
+
 services:
-    visible-consonants:
-       image: "${APPNAME}:${VERSION}"
-       deploy:
-          replicas: 1
-          resources:
-             limits:
-                memory: "3GB"
-       ports:
-          - "10008:3838"
-       networks:
-          - ${APPNAME}
+  visible-consonants:
+    image: "visible-consonants:latest"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: "3G"
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3838 || exit 1"]
+    ports:
+       - "10008:3838"
+    networks:
+       - visible-consonants
+
 networks:
-    visible-consonants:
+  visible-consonants:
+    driver: overlay
+    attachable: true
