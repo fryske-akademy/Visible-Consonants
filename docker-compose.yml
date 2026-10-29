@@ -7,7 +7,7 @@ services:
       replicas: 1
       resources:
         limits:
-          memory: "3G"
+          memory: "2G"
       restart_policy:
         condition: on-failure
     healthcheck:
