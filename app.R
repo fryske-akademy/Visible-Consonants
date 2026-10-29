@@ -24,6 +24,10 @@ library(shinybusy)
 
 ################################################################################
 
+sound <- ""
+
+################################################################################
+
 Scale <- function(h,replyScale,Ref)
 {
   if (replyScale==" none")
@@ -132,7 +136,7 @@ consonantNormD <- function(consonantTab,replyNormal,replyVariable)
   if ((is.null(consonantTab)) || (length(replyNormal)==0))
     return(NULL)
 
-  indexConsonant <- grep("^consonant$", colnames(consonantTab))
+  indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab))
   indexVar       <- which(colnames(consonantTab)==replyVariable)
 
    SpeaKer <- unique(consonantTab[,1])
@@ -168,7 +172,7 @@ consonantNormD <- function(consonantTab,replyNormal,replyVariable)
     
     if (grepl("rescaled", replyNormal))
     {
-      lmmod <- lm(vT$orig~vT[,indexVar])
+      lmmod <- lm(vT$orig~vT[,indexVar], na.action = na.exclude)
       vT[,indexVar] <- as.numeric(predict(lmmod))
     }
     
@@ -197,10 +201,10 @@ consonantNormD <- function(consonantTab,replyNormal,replyVariable)
     
     if (grepl("rescaled", replyNormal))
     {
-      lmmod <- lm(vT$orig~vT[,indexVar])
+      lmmod <- lm(vT$orig~vT[,indexVar], na.action = na.exclude)
       vT[,indexVar] <- as.numeric(predict(lmmod))
     }
-    
+
     return(vT)
   }
   else
@@ -833,9 +837,17 @@ server <- function(input, output, session)
     m <- checkVar("speaker"  , 1, T)
     if (m!="OK") return(m)
 
-    m <- checkVar("consonant", 2, T)
-    if (m!="OK") return(m)
-    
+    m1 <- checkVar("vowel"    , 2, T)
+    m2 <- checkVar("consonant", 2, T)
+    m3 <- checkVar("sound"    , 2, T)
+
+    if (m1=="OK") sound <<- "vowel"
+    if (m2=="OK") sound <<- "consonant"
+    if (m3=="OK") sound <<- "sound"
+
+    if ((m1!="OK") & (m2!="OK") & (m3!="OK")) 
+      return(paste(m1, m2, m3, sep = " or "))
+
     m <- checkVar("sequence" , 3, T)
     if (m!="OK") return(m)
     
@@ -913,7 +925,7 @@ server <- function(input, output, session)
     }
     else {}
 
-    indexConsonant <- grep("^consonant$", tolower(trimws(colnames(vT), "r")))
+    indexConsonant <- grep(paste0("^", sound, "$"), tolower(trimws(colnames(vT), "r")))
 
     for (k in 1:ncol(vT))
     {
@@ -1016,7 +1028,7 @@ server <- function(input, output, session)
 
     vT <- consonantNorm2()
 
-    indexConsonant <- grep("^consonant$", colnames(vT))
+    indexConsonant <- which(colnames(vT)==sound)
     indexVar       <- which(colnames(vT)==input$replyVariable2)
 
     vT <- subset(vT, !is.na(vT[,indexVar]))
@@ -1045,7 +1057,7 @@ server <- function(input, output, session)
     {
       if (is.element("average",input$selGeon2))
       {
-        vT <- data.frame(indexXaxis=vT$indexXaxis, speaker=vT$speaker, consonant=vT$consonant, variable=vT$variable)
+        vT <- data.frame(indexXaxis=vT$indexXaxis, speaker=vT$speaker, consonant=vT[,indexConsonant], variable=vT$variable)
         vT <- aggregate(variable ~ indexXaxis + speaker + consonant, data=vT, FUN=mean)
         vT <- aggregate(variable ~ indexXaxis +           consonant, data=vT, FUN=mean)
       }
@@ -1086,7 +1098,7 @@ server <- function(input, output, session)
 
       if (is.element("average",input$selGeon2))
       {
-        vT <- data.frame(indexXaxis=vT$indexXaxis, indexPlot=vT$indexPlot, speaker=vT$speaker, consonant=vT$consonant, variable=vT$variable)
+        vT <- data.frame(indexXaxis=vT$indexXaxis, indexPlot=vT$indexPlot, speaker=vT$speaker, consonant=vT[,indexConsonant], variable=vT$variable)
         vT <- aggregate(variable ~ indexXaxis + indexPlot + speaker + consonant, data=vT, FUN=mean)
         vT <- aggregate(variable ~ indexXaxis + indexPlot +           consonant, data=vT, FUN=mean)
       }
@@ -1143,7 +1155,7 @@ server <- function(input, output, session)
 
       if (is.element("average",input$selGeon2))
       {
-        vT <- data.frame(indexXaxis=vT$indexXaxis, indexLine=vT$indexLine, speaker=vT$speaker, consonant=vT$consonant, variable=vT$variable)
+        vT <- data.frame(indexXaxis=vT$indexXaxis, indexLine=vT$indexLine, speaker=vT$speaker, consonant=vT[,indexConsonant], variable=vT$variable)
         vT <- aggregate(variable ~ indexXaxis + indexLine + speaker + consonant, data=vT, FUN=mean)
         vT <- aggregate(variable ~ indexXaxis + indexLine +           consonant, data=vT, FUN=mean)
       }
@@ -1198,7 +1210,7 @@ server <- function(input, output, session)
 
       if (is.element("average",input$selGeon2))
       {
-        vT <- data.frame(indexXaxis=vT$indexXaxis, indexPlot=vT$indexPlot, indexLine=vT$indexLine, speaker=vT$speaker, consonant=vT$consonant, variable=vT$variable)
+        vT <- data.frame(indexXaxis=vT$indexXaxis, indexPlot=vT$indexPlot, indexLine=vT$indexLine, speaker=vT$speaker, consonant=vT[,indexConsonant], variable=vT$variable)
         vT <- aggregate(variable ~ indexXaxis + indexPlot + indexLine + speaker + consonant, data=vT, FUN=mean)
         vT <- aggregate(variable ~ indexXaxis + indexPlot + indexLine +           consonant, data=vT, FUN=mean)
       }
@@ -1325,7 +1337,7 @@ server <- function(input, output, session)
     if (is.null(consonantTab()))
       return(NULL)
 
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
 
     if (is.element("<vowel", colnames(consonantTab())))
@@ -1355,7 +1367,7 @@ server <- function(input, output, session)
     if (is.null(consonantTab()))
       return(NULL)
 
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
 
     if (is.element("<vowel", colnames(consonantTab())))
@@ -1385,7 +1397,7 @@ server <- function(input, output, session)
     if (is.null(consonantTab()))
       return(NULL)
 
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
 
     if (is.element("<vowel", colnames(consonantTab())))
@@ -1527,7 +1539,7 @@ server <- function(input, output, session)
       if (input$replyGraph2=="Bar chart")
       {
         gp <- ggplot(data=consonantSub2(), aes(x=consonantSub2()[,1], y=consonantSub2()[,2])) +
-              geom_bar(stat="identity", colour="black", fill="indianred2", size=.3) +
+              geom_bar(stat="identity", colour="black", fill="indianred2", linewidth=.3) +
               geom_errorbar(aes(ymin=ll, ymax=ul), width=w) +
               ggtitle(input$title2) +
               xlab(paste(input$replyXaxis2, collapse = " ")) + ylab(paste0(varName, axisLab(input$replyVariable2,input$replyScale2,input$replyNormal2))) +
@@ -1562,7 +1574,7 @@ server <- function(input, output, session)
       if (input$replyGraph2=="Bar chart")
       {
         gp <- ggplot(data=consonantSub2(), aes(x=consonantSub2()[,1], y=consonantSub2()[,3])) +
-              geom_bar(stat="identity", colour="black", fill="indianred2", size=.3) +
+              geom_bar(stat="identity", colour="black", fill="indianred2", linewidth=.3) +
               geom_errorbar(aes(ymin=ll, ymax=ul), width=w) +
               ggtitle(input$title2) +
               xlab(paste(input$replyXaxis2, collapse = " ")) + ylab(paste0(varName, axisLab(input$replyVariable2,input$replyScale2,input$replyNormal2))) +
@@ -1603,7 +1615,7 @@ server <- function(input, output, session)
         pd <- position_dodge(0.9)
 
         gp <- ggplot(data=consonantSub2(), aes(x=consonantSub2()[,1], y=consonantSub2()[,3], fill=consonantSub2()[,2])) +
-              geom_bar(position=position_dodge(), stat="identity", colour="black", size=.3) +
+              geom_bar(position=position_dodge(), stat="identity", colour="black", linewidth=.3) +
               geom_errorbar(aes(ymin=ll, ymax=ul), width=w, position=pd) +
               ggtitle(input$title2) +
               xlab(paste(input$replyXaxis2, collapse = " ")) + ylab(paste0(varName, axisLab(input$replyVariable2,input$replyScale2,input$replyNormal2))) +
@@ -1652,7 +1664,7 @@ server <- function(input, output, session)
         pd <- position_dodge(0.9)
 
         gp <- ggplot(data=consonantSub2(), aes(x=consonantSub2()[,1], y=consonantSub2()[,4], fill=consonantSub2()[,2])) +
-              geom_bar(position=position_dodge(), stat="identity", colour="black", size=.3) +
+              geom_bar(position=position_dodge(), stat="identity", colour="black", linewidth=.3) +
               geom_errorbar(aes(ymin=ll, ymax=ul), width=w, position=pd) +
               ggtitle(input$title2) +
               xlab(paste(input$replyXaxis2, collapse = " ")) + ylab(paste0(varName, axisLab(input$replyVariable2,input$replyScale2,input$replyNormal2))) +
@@ -1868,8 +1880,9 @@ server <- function(input, output, session)
     vT$indexShape <- fuseCols(consonantNorm3(),input$replyShape3)
     vT$indexPlot  <- fuseCols(consonantNorm3(),input$replyPlot3)
 
-    indexConsonant <- grep("^consonant$", colnames(consonantNorm3()))
-
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantNorm3()))
+    colnames(vT)[indexConsonant] <- "consonant"
+    
     ### check begin
 
     if (length(vT$indexColor)==0)
@@ -1934,10 +1947,11 @@ server <- function(input, output, session)
 
     if (nrow(vT)>0)
     {
-      vT0 <- data.frame()
-
       indexVar1 <- grep(paste0("^", input$axisX, "$"), colnames(consonantNorm3()))
       indexVar2 <- grep(paste0("^", input$axisY, "$"), colnames(consonantNorm3()))
+
+      vT <- subset(vT, !is.na(vT[,indexVar1]))
+      vT <- subset(vT, !is.na(vT[,indexVar2]))
 
       if (length(input$catColor3)>0)
         Color <- vT$indexColor
@@ -1954,20 +1968,17 @@ server <- function(input, output, session)
       else
         Plot  <- rep("none",nrow(vT))
 
-      vT <- subset(vT, !is.na(vT[,indexVar1]))
-      vT <- subset(vT, !is.na(vT[,indexVar2]))
-      
       Xaxis <- vT[,indexVar1]
       Yaxis <- vT[,indexVar2]
 
-      vT0 <- rbind(vT0, data.frame(speaker   = vT$speaker  ,
-                                   consonant = vT$consonant,
-                                   color     = Color       ,
-                                   shape     = Shape       ,
-                                   plot      = Plot        ,
-                                   index     = rownames(vT),
-                                   X         = Xaxis       ,
-                                   Y         = Yaxis       ))
+      vT0 <- data.frame(speaker   = vT$speaker  ,
+                        consonant = vT$consonant,
+                        color     = Color       ,
+                        shape     = Shape       ,
+                        plot      = Plot        ,
+                        index     = rownames(vT),
+                        X         = Xaxis       ,
+                        Y         = Yaxis       )
 
       if (input$average3)
         vT0 <- aggregate(cbind(X,Y)~speaker+consonant+color+shape+plot, data=vT0, FUN=mean)
@@ -2152,7 +2163,7 @@ server <- function(input, output, session)
     if (is.null(consonantTab()))
       return(NULL)
 
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
 
     if (is.element("<vowel", colnames(consonantTab())))
@@ -2189,7 +2200,7 @@ server <- function(input, output, session)
       options <- c()
     else
     {
-      indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+      indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
       options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
       
       if (is.element("<vowel", colnames(consonantTab())))
@@ -2225,7 +2236,7 @@ server <- function(input, output, session)
     if (is.null(consonantTab()))
       return(NULL)
 
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
 
     if (is.element("<vowel", colnames(consonantTab())))
@@ -2460,9 +2471,12 @@ server <- function(input, output, session)
       }
 
       if (!input$geon1)
-        Basis <- Basis + labs(colour=paste(input$replyColor3, collapse = " "), shape=paste(input$replyShape3, collapse = " "))
+        Basis <- Basis + labs(colour=paste(input$replyColor3, collapse = " "))
       else
-        Basis <- Basis + guides(colour="none") + labs(shape=paste(input$replyShape3, collapse = " "))
+        Basis <- Basis + guides(colour="none")
+
+      if ((numShape()>0) & (numShape()<=11))
+        Basis <- Basis + labs(shape=paste(input$replyShape3, collapse = " "))
 
       if (length(input$catPlot3)>0)
       {
@@ -2533,7 +2547,7 @@ server <- function(input, output, session)
       {
         chulls <- ddply(vT, .(color,plot), function(df) df[grDevices::chull(df$X, df$Y), ])
 
-        if ((length(unique(vT$color))==1) | (as.character(input$replyColor3)[1]=="consonant"))
+        if ((length(unique(vT$color))==1) | (as.character(input$replyColor3)[1]==sound))
         {
           Hull <- geom_polygon(data=chulls, aes(x=X, y=Y, group=color, fill=color), alpha=0.1)
           Fill <- scale_fill_manual(values=colPalette3(length(unique(vT$color))))
@@ -2579,7 +2593,7 @@ server <- function(input, output, session)
           Ellipse <- stat_ellipse(position="identity", type="norm", level=input$replyLevel)
         else
         {
-          if ((length(unique(vT$color))==1) | (as.character(input$replyColor3)[1]=="consonant"))
+          if ((length(unique(vT$color))==1) | (as.character(input$replyColor3)[1]==sound))
           {
             Ellipse <- stat_ellipse(position="identity", type="norm", level=input$replyLevel, geom="polygon", alpha=0.3)
             Fill <- scale_fill_manual(values=colPalette3(length(unique(vT$color))))
@@ -2778,7 +2792,7 @@ server <- function(input, output, session)
       
     if (input$replyVowel0=="preceding vowel")
       return(grep("^<duration", colnames(consonantTab())))
-    if (input$replyVowel0=="consonant")
+    if (input$replyVowel0==sound)
       return(grep("^duration", colnames(consonantTab())))
     if (input$replyVowel0=="following vowel")
       return(grep("^>duration", colnames(consonantTab())))
@@ -2790,7 +2804,7 @@ server <- function(input, output, session)
     
     if (input$replyVowel0=="preceding vowel")
       return(grep("^<time", colnames(consonantTab())))
-    if (input$replyVowel0=="consonant")
+    if (input$replyVowel0==sound)
       return(grep("^time", colnames(consonantTab())))
     if (input$replyVowel0=="following vowel")
       return(grep("^>time", colnames(consonantTab())))
@@ -2848,7 +2862,7 @@ server <- function(input, output, session)
     vT$indexPlot <- fuseCols(vowelScale0(),input$replyPlot0)
     vT$indexLine <- fuseCols(vowelScale0(),input$replyLine0)
 
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     indexVar       <- grep(paste0("^", tolower(input$replyVar0), "$"), tolower(colnames(consonantTab())))
     indexVar       <- indexVar[as.numeric(input$catXaxis0)]
     timeLabs       <- as.numeric(names(getTimeCode()))[as.numeric(input$catXaxis0)]
@@ -2874,7 +2888,7 @@ server <- function(input, output, session)
         x <- as.numeric(as.character(c(x,rep(timeLabs[i],nrow(vT)))))
         y <- c(y,vT[,indexVar[i]])
         s <- c(s,as.character(vT$speaker))
-        v <- c(v,as.character(vT$consonant))
+        v <- c(v,as.character(vT[,indexConsonant]))
       }
 
       vT0 <- data.frame(x,s,v,y)
@@ -2931,7 +2945,7 @@ server <- function(input, output, session)
         y <- c(y,vT[,indexVar[i]])
         p <- c(p,vT$indexPlot)
         s <- c(s,as.character(vT$speaker))
-        v <- c(v,as.character(vT$consonant))
+        v <- c(v,as.character(vT[,indexConsonant]))
       }
 
       vT0 <- data.frame(x,p,s,v,y)
@@ -2992,7 +3006,7 @@ server <- function(input, output, session)
         y <- c(y,vT[,indexVar[i]])
         l <- c(l,vT$indexLine)
         s <- c(s,as.character(vT$speaker))
-        v <- c(v,as.character(vT$consonant))
+        v <- c(v,as.character(vT[,indexConsonant]))
       }
 
       vT0 <- data.frame(x,l,s,v,y)
@@ -3056,7 +3070,7 @@ server <- function(input, output, session)
         p <- c(p,vT$indexPlot)
         l <- c(l,vT$indexLine)
         s <- c(s,as.character(vT$speaker))
-        v <- c(v,as.character(vT$consonant))
+        v <- c(v,as.character(vT[,indexConsonant]))
       }
 
       vT0 <- data.frame(x,p,l,s,v,y)
@@ -3117,7 +3131,7 @@ server <- function(input, output, session)
       options <- c(options, "preceding vowel")
 
     if (length(vars2) > 0)
-      options <- c(options, "consonant")
+      options <- c(options, sound)
     
     if (length(vars3) > 0)
       options <- c(options, "following vowel")
@@ -3153,7 +3167,7 @@ server <- function(input, output, session)
     if (input$replyVowel0=="preceding vowel")
       options <- (grep("^[<]"            , vars, value = T))
       
-    if (input$replyVowel0=="consonant")
+    if (input$replyVowel0==sound)
       options <- (grep("^[a-z, A-Z, 0-9]", vars, value = T)) 
       
     if (input$replyVowel0=="following vowel")
@@ -3175,7 +3189,7 @@ server <- function(input, output, session)
     if ((is.null(consonantTab())) || (length(input$replyVowel0)==0))
       return(NULL)
 
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
 
     if ((input$replyVowel0=="preceding vowel") && (is.element("<vowel", colnames(consonantTab()))))
@@ -3197,7 +3211,7 @@ server <- function(input, output, session)
     if ((input$replyVowel0=="preceding vowel") && (is.element("<vowel", colnames(consonantTab()))))
       vT <- subset(consonantTab(), `<vowel`!="∅")
     
-    if  (input$replyVowel0=="consonant")
+    if  (input$replyVowel0==sound)
       vT <- consonantTab()
     
     if ((input$replyVowel0=="following vowel") && (is.element(">vowel", colnames(consonantTab()))))
@@ -3216,7 +3230,7 @@ server <- function(input, output, session)
     if ((is.null(consonantTab())) || (length(input$replyVowel0)==0))
       return(NULL)
 
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
 
     if ((input$replyVowel0=="preceding vowel") && (is.element("<vowel", colnames(consonantTab()))))
@@ -3238,7 +3252,7 @@ server <- function(input, output, session)
     if ((input$replyVowel0=="preceding vowel") && (is.element("<vowel", colnames(consonantTab()))))
       vT <- subset(consonantTab(), `<vowel`!="∅")
 
-    if  (input$replyVowel0=="consonant")
+    if  (input$replyVowel0==sound)
       vT <- consonantTab()
     
     if ((input$replyVowel0=="following vowel") && (is.element(">vowel", colnames(consonantTab()))))
@@ -3659,7 +3673,9 @@ server <- function(input, output, session)
 
     if (is.element("average",input$selGeon1))
     {
-      vT <- data.frame(indexXaxis=vT$indexXaxis, indexPlot=vT$indexPlot, speaker=vT$speaker, consonant=vT$consonant, dur1=vT$dur1, dur2=vT$dur2, dur3=vT$dur3)
+      indexConsonant <- grep(paste0("^", sound, "$"), colnames(vT))
+
+      vT <- data.frame(indexXaxis=vT$indexXaxis, indexPlot=vT$indexPlot, speaker=vT$speaker, consonant=vT[,indexConsonant], dur1=vT$dur1, dur2=vT$dur2, dur3=vT$dur3)
       vT <- aggregate(cbind(dur1,dur2,dur3) ~ indexXaxis + indexPlot + speaker + consonant, data=vT, FUN=mean)
       vT <- aggregate(cbind(dur1,dur2,dur3) ~ indexXaxis + indexPlot +           consonant, data=vT, FUN=mean)
     }
@@ -3787,7 +3803,7 @@ server <- function(input, output, session)
     if ((is.null(consonantTab())) | (length(input$replySequence1)==0))
       return(NULL)
       
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
     options <- options[options!="sequence"]
 
@@ -3838,7 +3854,7 @@ server <- function(input, output, session)
     if ((is.null(consonantTab())) | (length(input$replySequence1)==0))
       return(NULL)
       
-    indexConsonant <- grep("^consonant$", colnames(consonantTab()))
+    indexConsonant <- grep(paste0("^", sound, "$"), colnames(consonantTab()))
     options <- c(colnames(consonantTab()[indexConsonant]),colnames(consonantTab()[1:(indexConsonant-1)]))
     options <- options[options!="sequence"]
 
@@ -3923,7 +3939,7 @@ server <- function(input, output, session)
                                size = 3) +
                      scale_fill_manual(values = c("#619cff", "#555555", "#619cff", "white")[indices],
                                        name   = "element\n", 
-                                       labels = c('vowel', 'consonant', 'vowel', '')[indices]) +
+                                       labels = c('vowel', sound, 'vowel', '')[indices]) +
                      ggtitle(input$title1) +
                      xlab("") + ylab(paste0(varName, axisLab(input$replyVariable1," none",input$replyNormal1))) +
                      coord_flip() +
